@@ -5,6 +5,7 @@ import com.mindhub.order_service.exceptions.OrderException;
 import com.mindhub.order_service.models.EntityOrder;
 import com.mindhub.order_service.models.OrderItem;
 import com.mindhub.order_service.models.OrderStatus;
+import com.mindhub.order_service.models.ProductError;
 import com.mindhub.order_service.repositories.OrderItemRepository;
 import com.mindhub.order_service.repositories.OrderRepository;
 import com.mindhub.order_service.services.OrderService;
@@ -63,39 +64,43 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.save(order);
     }
 
-    /*
+
     @Override
-    public Map<OrderDTO, String> createOrder(NewOrderRecord newOrder) throws OrderException {
+    public OrderCreatedRecord createOrder(NewOrderRecord newOrder) throws OrderException {
         String uri = "/email/" + newOrder.email();
         try{
             Long userId = restTemplate.getForObject(userPath + uri, Long.class);
             ParameterizedTypeReference<List<ExistentProductsRecord>> responseType =
                     new ParameterizedTypeReference<>() {};
             HttpEntity<List<ProductQuantityRecord>> httpEntity = new HttpEntity<>(newOrder.recordList());
-            ResponseEntity<List<ExistentProductsRecord>> responseEntity = restTemplate.exchange(productPath, HttpMethod.PUT ,httpEntity, responseType);
+            try {
+                ResponseEntity<List<ExistentProductsRecord>> responseEntity = restTemplate.exchange(productPath, HttpMethod.PUT, httpEntity, responseType);
 
-            EntityOrder order = new EntityOrder(OrderStatus.PENDING);
-            order.setUserId(userId);
-            orderRepository.save(order);
+                EntityOrder order = new EntityOrder(OrderStatus.PENDING);
+                order.setUserId(userId);
+                orderRepository.save(order);
 
-            generateOrderItemList(responseEntity.getBody(), order);
+                generateOrderItemList(responseEntity.getBody(), order);
 
-            String errorMessage = generateErrorMessage(newOrder.recordList(), responseEntity.getBody());
-            orderRepository.save(order);
+                List<ErrorProductRecord> errorList = generateErrorProductList(newOrder.recordList(), responseEntity.getBody());
 
-            OrderDTO orderDTO = new OrderDTO(order);
+                orderRepository.save(order);
 
-            Map<OrderDTO, String> orderMap = new HashMap<>();
-            orderMap.put(orderDTO, errorMessage);
-            return orderMap;
+                OrderDTO orderDTO = new OrderDTO(order);
+
+                return new OrderCreatedRecord(orderDTO, errorList);
+            } catch (HttpClientErrorException | HttpServerErrorException e) {
+                throw new RuntimeException("Error communicating with product-service: " + e.getMessage());
+            }
         } catch (HttpClientErrorException.NotFound e) {
             throw new RuntimeException("User with email " + newOrder.email() + " not found");
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             throw new RuntimeException("Error communicating with product-service: " + e.getMessage());
         }
     }
-     */
 
+
+    /*
     @Override
     public OrderDTO createOrder(NewOrderRecord newOrder) throws OrderException {
         String uri = "/email/" + newOrder.email();
@@ -104,26 +109,32 @@ public class OrderServiceImpl implements OrderService {
             ParameterizedTypeReference<List<ExistentProductsRecord>> responseType =
                     new ParameterizedTypeReference<>() {};
             HttpEntity<List<ProductQuantityRecord>> httpEntity = new HttpEntity<>(newOrder.recordList());
-            ResponseEntity<List<ExistentProductsRecord>> responseEntity = restTemplate.exchange(productPath, HttpMethod.PUT ,httpEntity, responseType);
+            try {
+                ResponseEntity<List<ExistentProductsRecord>> responseEntity = restTemplate.exchange(productPath, HttpMethod.PUT, httpEntity, responseType);
+                EntityOrder order = new EntityOrder(OrderStatus.PENDING);
+                order.setUserId(userId);
+                orderRepository.save(order);
 
-            EntityOrder order = new EntityOrder(OrderStatus.PENDING);
-            order.setUserId(userId);
-            orderRepository.save(order);
+                generateOrderItemList(responseEntity.getBody(), order);
 
-            generateOrderItemList(responseEntity.getBody(), order);
+                orderRepository.save(order);
 
-            String errorMessage = generateErrorMessage(newOrder.recordList(), responseEntity.getBody());
-            orderRepository.save(order);
+                OrderDTO orderDTO = new OrderDTO(order);
 
-            OrderDTO orderDTO = new OrderDTO(order);
-
-            return orderDTO;
+                return orderDTO;
+            } catch (HttpClientErrorException.NotFound e) {
+                    throw new RuntimeException("Products not found");
+            } catch (HttpClientErrorException | HttpServerErrorException e) {
+                    throw new RuntimeException("Error communicating with product-service: " + e.getMessage());
+            }
         } catch (HttpClientErrorException.NotFound e) {
             throw new RuntimeException("User with email " + newOrder.email() + " not found");
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new RuntimeException("Error communicating with product-service: " + e.getMessage());
+            throw new RuntimeException("Error communicating with user-service: " + e.getMessage());
         }
     }
+
+     */
 
     private void generateOrderItemList(List<ExistentProductsRecord> productQuantityList, EntityOrder order){
         //List<OrderItem> orderItemList = new ArrayList<>();
@@ -157,6 +168,30 @@ public class OrderServiceImpl implements OrderService {
                 })
                 .collect(Collectors.joining(","));
     }
+
+
+    private List<ErrorProductRecord> generateErrorProductList(List<ProductQuantityRecord> userProductsList,List<ExistentProductsRecord> existentProductsList){
+        List<ErrorProductRecord> errorProductList = new ArrayList<>();
+        List<ProductQuantityRecord> aux = userProductsList.stream()
+                .filter(userProduct ->
+                        !existentProductsList.stream().anyMatch(availableProduct ->
+                                availableProduct.id().equals(userProduct.id()) && availableProduct.price() != null)
+                ).toList();
+
+        aux.forEach(product -> {
+            boolean productExists = existentProductsList.stream()
+                    .anyMatch(p -> p.id().equals(product.id()));
+            if (productExists) {
+                errorProductList.add(new ErrorProductRecord(product.id(), ProductError.NO_STOCK));
+            } else {
+                errorProductList.add(new ErrorProductRecord(product.id(), ProductError.NOT_FOUND));
+            }
+        });
+
+        return  errorProductList;
+    }
+
+
 
     /*
     @Override

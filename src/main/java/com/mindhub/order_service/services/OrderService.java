@@ -1,9 +1,6 @@
 package com.mindhub.order_service.services;
 
-import com.mindhub.order_service.dtos.NewOrderDTO;
-import com.mindhub.order_service.dtos.NewOrderRecord;
-import com.mindhub.order_service.dtos.OrderDTO;
-import com.mindhub.order_service.dtos.UpdateOrderDTO;
+import com.mindhub.order_service.dtos.*;
 import com.mindhub.order_service.exceptions.OrderException;
 import com.mindhub.order_service.models.EntityOrder;
 import com.mindhub.order_service.models.OrderStatus;
@@ -20,8 +17,8 @@ public interface OrderService {
 
     EntityOrder saveEntityOrder(EntityOrder order);
 
-    OrderDTO createOrder(NewOrderRecord newOrder) throws OrderException;
-    //Map<OrderDTO, String> createOrder(NewOrderRecord newOrder) throws OrderException;
+    //OrderDTO createOrder(NewOrderRecord newOrder) throws OrderException;
+    OrderCreatedRecord createOrder(NewOrderRecord newOrder) throws OrderException;
 
     List<OrderDTO> getAllOrderDTOs();
     List<OrderDTO> getAllOrderDTOsByUserId(Long userId);
