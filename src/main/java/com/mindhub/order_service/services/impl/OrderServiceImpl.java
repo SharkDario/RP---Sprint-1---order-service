@@ -95,7 +95,7 @@ public class OrderServiceImpl implements OrderService {
         } catch (HttpClientErrorException.NotFound e) {
             throw new RuntimeException("User with email " + newOrder.email() + " not found");
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new RuntimeException("Error communicating with product-service: " + e.getMessage());
+            throw new RuntimeException("Error communicating with user-service: " + e.getMessage());
         }
     }
 
