@@ -1,8 +1,10 @@
 package com.mindhub.order_service.controllers;
 
 import com.mindhub.order_service.dtos.NewOrderDTO;
+import com.mindhub.order_service.dtos.NewOrderRecord;
 import com.mindhub.order_service.dtos.OrderDTO;
 import com.mindhub.order_service.dtos.UpdateOrderDTO;
+import com.mindhub.order_service.exceptions.OrderException;
 import com.mindhub.order_service.services.OrderItemService;
 import com.mindhub.order_service.services.OrderService;
 import jakarta.persistence.EntityNotFoundException;
@@ -56,11 +58,27 @@ public class OrderController {
     }
 
     // POST /orders: Create an order.
-    @PostMapping("/{id}")
-    public ResponseEntity<?> createOrder(@PathVariable Long id, @Valid @RequestBody NewOrderDTO newOrderDTO) {
-        orderService.createOrder(id, newOrderDTO);
-        return new ResponseEntity<>("Order created successfully", HttpStatus.CREATED);
+    @PostMapping
+    public ResponseEntity<OrderDTO> createOrder(@RequestBody NewOrderRecord newOrderDTO) throws OrderException {
+        OrderDTO createdOrder = orderService.createOrder(newOrderDTO);
+        return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
     }
+
+
+    /*
+    @PostMapping
+    public ResponseEntity<OrderDTO> createOrder(@RequestBody NewOrderRecord newOrderDTO) throws OrderException {
+        Map<OrderDTO, String> orderMap = orderService.createOrder(newOrderDTO);
+        OrderDTO createdOrder = orderMap.keySet().iterator().next();
+        String errorMessage = orderMap.get(createdOrder);
+
+        // Devuelve el OrderDTO en el cuerpo y el mensaje en un header
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .header("X-Error-Message", errorMessage) // Agrega el mensaje como header
+                .body(createdOrder); // Devuelve el OrderDTO en el cuerpo
+    }
+
+     */
 
     // GET /orders: Get all orders.
     @GetMapping

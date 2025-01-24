@@ -49,7 +49,7 @@ public class OrderItemServiceImpl implements OrderItemService {
     @Override
     public boolean createOrderItem(Long orderId, Long productId, NewOrderItemDTO newOrderItemDTO) {
         // Verify if productId exists in product-service
-        // Use Boolean.TRUE.equals if getForObject returns null
+        // Use Boolean.TRUE.equals if getForObject returns null, converts it to false
         try {
             boolean productExists = Boolean.TRUE.equals(restTemplate.getForObject(PRODUCT_SERVICE_URL + productId, Boolean.class));
             if (!productExists) {
