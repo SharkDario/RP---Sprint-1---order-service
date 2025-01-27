@@ -1,4 +1,5 @@
 package com.mindhub.order_service.util;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import java.io.IOException;
 public class RestTemplateConfig {
 
     @Bean
+    @LoadBalanced // habilitate the charge balance
     public RestTemplate restTemplate() {
         RestTemplate restTemplate = new RestTemplate();
 

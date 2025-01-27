@@ -9,6 +9,7 @@ import com.mindhub.order_service.repositories.OrderItemRepository;
 import com.mindhub.order_service.repositories.OrderRepository;
 import com.mindhub.order_service.services.OrderItemService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -28,7 +29,10 @@ public class OrderItemServiceImpl implements OrderItemService {
     @Autowired
     private RestTemplate restTemplate;
 
-    private final String PRODUCT_SERVICE_URL = "http://localhost:8082/api/products/exists/";
+    //private final String PRODUCT_SERVICE_URL = "http://localhost:8082/api/products/exists/";
+
+    @Value("${PRODUCTS_PATH}")
+    private String productPath; // lb://product-service/api/products -> LoadBalanced in RestTemplate
 
     @Override
     public OrderItemDTO getOrderItemDTOById(Long id) {
@@ -51,7 +55,7 @@ public class OrderItemServiceImpl implements OrderItemService {
         // Verify if productId exists in product-service
         // Use Boolean.TRUE.equals if getForObject returns null, converts it to false
         try {
-            boolean productExists = Boolean.TRUE.equals(restTemplate.getForObject(PRODUCT_SERVICE_URL + productId, Boolean.class));
+            boolean productExists = Boolean.TRUE.equals(restTemplate.getForObject(productPath + "/exists/" + productId, Boolean.class));
             if (!productExists) {
                 throw new RuntimeException("Product with ID " + productId + " not found");
             }

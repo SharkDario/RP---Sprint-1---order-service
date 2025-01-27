@@ -54,25 +54,11 @@ public class OrderController {
         return error;
     }
 
-    // POST /orders: Create an order.
-    /*
-    @PostMapping
-    public ResponseEntity<OrderDTO> createOrder(@RequestBody NewOrderRecord newOrderDTO) throws OrderException {
-        OrderDTO createdOrder = orderService.createOrder(newOrderDTO);
-        return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
-    }
-
-     */
-
-
-
     @PostMapping
     public ResponseEntity<OrderCreatedRecord> createOrder(@RequestBody NewOrderRecord newOrderDTO) throws OrderException {
         OrderCreatedRecord createdOrder = orderService.createOrder(newOrderDTO);
         return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
     }
-
-
 
     // GET /orders: Get all orders.
     @GetMapping

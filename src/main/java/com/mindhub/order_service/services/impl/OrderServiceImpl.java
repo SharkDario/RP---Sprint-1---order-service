@@ -35,12 +35,10 @@ public class OrderServiceImpl implements OrderService {
     private RestTemplate restTemplate;
 
     @Value("${USERS_PATH}")
-    private String userPath;
+    private String userPath; // lb://user-service/api/user -> LoadBalanced in RestTemplate
 
     @Value("${PRODUCTS_PATH}")
-    private String productPath;
-
-    //private final String USER_SERVICE_URL = "http://localhost:8081/api/user/exists/";
+    private String productPath; // lb://product-service/api/products -> LoadBalanced in RestTemplate
 
     @Override
     public OrderDTO getOrderDTOById(Long id) {
@@ -95,7 +93,7 @@ public class OrderServiceImpl implements OrderService {
         } catch (HttpClientErrorException.NotFound e) {
             throw new RuntimeException("User with email " + newOrder.email() + " not found");
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new RuntimeException("Error communicating with product-service: " + e.getMessage());
+            throw new RuntimeException("Error communicating with user-service: " + e.getMessage());
         }
     }
 
