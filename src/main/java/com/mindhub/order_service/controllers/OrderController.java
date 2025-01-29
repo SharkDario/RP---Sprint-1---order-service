@@ -1,8 +1,7 @@
 package com.mindhub.order_service.controllers;
 
-import com.mindhub.order_service.dtos.NewOrderDTO;
-import com.mindhub.order_service.dtos.OrderDTO;
-import com.mindhub.order_service.dtos.UpdateOrderDTO;
+import com.mindhub.order_service.dtos.*;
+import com.mindhub.order_service.exceptions.OrderException;
 import com.mindhub.order_service.services.OrderItemService;
 import com.mindhub.order_service.services.OrderService;
 import jakarta.persistence.EntityNotFoundException;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -55,11 +55,10 @@ public class OrderController {
         return error;
     }
 
-    // POST /orders: Create an order.
-    @PostMapping("/{id}")
-    public ResponseEntity<?> createOrder(@PathVariable Long id, @Valid @RequestBody NewOrderDTO newOrderDTO) {
-        orderService.createOrder(id, newOrderDTO);
-        return new ResponseEntity<>("Order created successfully", HttpStatus.CREATED);
+    @PostMapping
+    public ResponseEntity<OrderCreatedRecord> createOrder(@RequestBody NewOrderRecord newOrderDTO) throws OrderException {
+        OrderCreatedRecord createdOrder = orderService.createOrder(newOrderDTO);
+        return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
     }
 
     // GET /orders: Get all orders.
@@ -67,6 +66,20 @@ public class OrderController {
     public ResponseEntity<List<OrderDTO>> getAllOrders() {
         List<OrderDTO> orders = orderService.getAllOrderDTOs();
         return new ResponseEntity<>(orders, HttpStatus.OK);
+    }
+
+    // GET order by id
+    // GET de todas las ordenes de un user
+    /*
+     * Retrieve all orders of a specific user.
+     * @param userId The ID of the user.
+     * @return A set of {@link OrderDTO} objects associated with the user.
+     * @response 200 OK - List of the user's orders.
+     */
+    @GetMapping("/all/{userId}")
+    public ResponseEntity<List<OrderDTO>> getAllOrdersByUserId(@PathVariable Long userId) {
+        List<OrderDTO> orders = orderService.getAllOrderDTOsByUserId(userId);
+        return ResponseEntity.ok(orders);
     }
 
     // PATCH /orders/{id}: Update an order (status)
@@ -80,6 +93,20 @@ public class OrderController {
         } catch (Exception e) {
             return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /*
+     * Update the status of an order.
+     * @param orderId The ID of the order.
+     * @param updateOrderRecord An object containing the new order status.
+     * @return The updated order as a {@link OrderDTO}.
+     * @throws OrderException If the order does not exist or the status is invalid.
+     * @response 200 OK - Order successfully updated.
+     */
+    @PutMapping("/{orderId}")
+    public ResponseEntity<OrderDTO> changeStatus(@PathVariable Long orderId, @RequestBody UpdateOrderDTO updateOrderRecord) throws OrderException {
+        OrderDTO orderDTO = orderService.changeStatus(orderId, updateOrderRecord.status());
+        return new ResponseEntity<>(orderDTO, HttpStatus.CREATED);
     }
 
     // DELETE /orders/{id}

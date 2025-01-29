@@ -2,8 +2,10 @@ package com.mindhub.order_service.models;
 
 import jakarta.persistence.*;
 
-import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.HashSet;
+import java.util.stream.Collectors;
 
 @Entity
 public class EntityOrder {
@@ -13,7 +15,7 @@ public class EntityOrder {
 
     private Long userId;
 
-    @OneToMany(mappedBy = "entityOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "entityOrder")
     private Set<OrderItem> products = new HashSet<>();
 
     private OrderStatus status;
@@ -39,6 +41,18 @@ public class EntityOrder {
 
     public Set<OrderItem> getProducts() {
         return products;
+    }
+
+    public void setProducts(Set<OrderItem> products) {
+        this.products = products;
+    }
+
+    public List<OrderItem> getProductsList() {
+        return products.stream().collect(Collectors.toList());
+    }
+
+    public void setProductsList(List<OrderItem> productsList) {
+        this.products = new HashSet<>(productsList);
     }
 
     public void addProduct(OrderItem orderItem) {
