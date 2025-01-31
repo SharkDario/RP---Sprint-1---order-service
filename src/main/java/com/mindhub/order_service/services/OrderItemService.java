@@ -2,11 +2,14 @@ package com.mindhub.order_service.services;
 
 import com.mindhub.order_service.dtos.NewOrderItemDTO;
 import com.mindhub.order_service.dtos.OrderItemDTO;
+import com.mindhub.order_service.dtos.ProductQuantityRecord;
 import com.mindhub.order_service.dtos.UpdateOrderItemDTO;
+import com.mindhub.order_service.exceptions.OrderException;
+import com.mindhub.order_service.exceptions.OrderItemException;
 import com.mindhub.order_service.models.OrderItem;
 
 import java.util.List;
-
+/*
 public interface OrderItemService {
     OrderItemDTO getOrderItemDTOById(Long id);
 
@@ -22,5 +25,7 @@ public interface OrderItemService {
 
     boolean updateOrderItem(Long id, UpdateOrderItemDTO updateOrderItemDTO);
 
-    public boolean deleteOrderItem(Long id);
+    public boolean deleteOrderItem(Long userId, Long orderItemId);
 }
+
+ */

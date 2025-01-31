@@ -1,11 +1,12 @@
 package com.mindhub.order_service.controllers;
 
-import com.mindhub.order_service.dtos.NewOrderDTO;
-import com.mindhub.order_service.dtos.OrderDTO;
-import com.mindhub.order_service.dtos.UpdateOrderDTO;
-import com.mindhub.order_service.services.OrderItemService;
+import com.mindhub.order_service.config.JwtUtils;
+import com.mindhub.order_service.dtos.*;
+import com.mindhub.order_service.exceptions.OrderException;
+//import com.mindhub.order_service.services.OrderItemService;
 import com.mindhub.order_service.services.OrderService;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -24,6 +26,9 @@ public class OrderController {
     // From behind generates a constructor and injects the bean for this repository (interface)
     @Autowired
     private OrderService orderService; // inject the interface directly
+
+    @Autowired
+    private JwtUtils jwtUtils;
 
     // Validate errors
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -55,22 +60,56 @@ public class OrderController {
         return error;
     }
 
-    // POST /orders: Create an order.
-    @PostMapping("/{id}")
-    public ResponseEntity<?> createOrder(@PathVariable Long id, @Valid @RequestBody NewOrderDTO newOrderDTO) {
-        orderService.createOrder(id, newOrderDTO);
-        return new ResponseEntity<>("Order created successfully", HttpStatus.CREATED);
+    @PostMapping("/user")
+    public ResponseEntity<OrderCreatedRecord> createOrder(@RequestBody NewOrderRecord newOrderDTO, HttpServletRequest request) throws OrderException {
+        String email = jwtUtils.getEmailFromToken(request.getHeader("Authorization"));
+        OrderCreatedRecord createdOrder = orderService.createOrder(email, newOrderDTO);
+        return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
     }
 
     // GET /orders: Get all orders.
-    @GetMapping
+    @GetMapping("/admin")
     public ResponseEntity<List<OrderDTO>> getAllOrders() {
         List<OrderDTO> orders = orderService.getAllOrderDTOs();
         return new ResponseEntity<>(orders, HttpStatus.OK);
     }
 
-    // PATCH /orders/{id}: Update an order (status)
-    @PatchMapping("/{id}")
+    // GET order by id
+    // GET de todas las ordenes de un user
+    /*
+     * Retrieve all orders of a specific user.
+     * @param userId The ID of the user.
+     * @return A set of {@link OrderDTO} objects associated with the user.
+     * @response 200 OK - List of the user's orders.
+     */
+    @GetMapping("/admin/all/{userId}")
+    public ResponseEntity<List<OrderDTO>> getAllOrdersByUserId(@PathVariable Long userId) {
+        List<OrderDTO> orders = orderService.getAllOrderDTOsByUserId(userId);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/user/all")
+    public ResponseEntity<List<OrderDTO>> getAllOrdersByUserId(HttpServletRequest request) {
+        Long userId = jwtUtils.getIdFromToken(request.getHeader("Authorization"));
+        List<OrderDTO> orders = orderService.getAllOrderDTOsByUserId(userId);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/user/{orderId}")
+    public ResponseEntity<OrderDTO> getOrderById(@PathVariable Long orderId, HttpServletRequest request) throws OrderException {
+        Long userId = jwtUtils.getIdFromToken(request.getHeader("Authorization"));
+        OrderDTO order = orderService.getOrderDTOByIdAndUser(orderId, userId);
+        return ResponseEntity.ok(order);
+    }
+
+    @GetMapping("/admin/{orderId}")
+    public ResponseEntity<OrderDTO> getOrderById(@PathVariable Long orderId) throws OrderException {
+        OrderDTO order = orderService.getOrderDTOById(orderId);
+        return ResponseEntity.ok(order);
+    }
+
+    // PATCH /orders/admin/{id}: Update an order (status)
+    @PatchMapping("/admin/{id}")
     public ResponseEntity<?> updateOrder(@PathVariable Long id, @Valid @RequestBody UpdateOrderDTO updateOrderDTO) {
         try {
             orderService.updateOrder(id, updateOrderDTO);
@@ -82,8 +121,31 @@ public class OrderController {
         }
     }
 
-    // DELETE /orders/{id}
-    @DeleteMapping("/{id}")
+    /*
+     * Update the status of an order.
+     * @param orderId The ID of the order.
+     * @param updateOrderRecord An object containing the new order status.
+     * @return The updated order as a {@link OrderDTO}.
+     * @throws OrderException If the order does not exist or the status is invalid.
+     * @response 200 OK - Order successfully updated.
+     */
+    @PutMapping("/user/{orderId}")
+    public ResponseEntity<OrderDTO> changeStatus(HttpServletRequest request, @PathVariable Long orderId, @RequestBody UpdateOrderDTO updateOrderRecord) throws OrderException {
+        Long userId  = jwtUtils.getIdFromToken(request.getHeader("Authorization"));
+        String email = jwtUtils.getEmailFromToken(request.getHeader("Authorization"));
+        OrderDTO orderDTO = orderService.changeStatus(userId, email, orderId, updateOrderRecord.status());
+        return new ResponseEntity<>(orderDTO, HttpStatus.CREATED);
+    }
+
+    @DeleteMapping("/user/{orderId}")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long orderId, HttpServletRequest request) throws OrderException {
+        Long userId  = jwtUtils.getIdFromToken(request.getHeader("Authorization"));
+        orderService.deleteOrderUser(userId,orderId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // DELETE /orders/admin/{id}
+    @DeleteMapping("/admin/{id}")
     public ResponseEntity<?> deleteOrder(@PathVariable Long id) {
         boolean deleted = orderService.deleteOrder(id);
         if (!deleted) {

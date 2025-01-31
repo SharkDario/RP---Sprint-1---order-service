@@ -45,4 +45,13 @@ public class OrderDTO {
     public OrderStatus getStatus() {
         return status;
     }
+
+    public List<ProductQuantityRecord> getProductQuantityRecords() {
+        return this.products.stream()
+                .map(orderItem -> new ProductQuantityRecord(
+                        orderItem.getProductId(),
+                        orderItem.getQuantity()
+                ))
+                .toList();
+    }
 }

@@ -2,21 +2,29 @@ package com.mindhub.order_service.services.impl;
 
 import com.mindhub.order_service.dtos.NewOrderItemDTO;
 import com.mindhub.order_service.dtos.OrderItemDTO;
+import com.mindhub.order_service.dtos.ProductQuantityRecord;
 import com.mindhub.order_service.dtos.UpdateOrderItemDTO;
+import com.mindhub.order_service.exceptions.OrderException;
+import com.mindhub.order_service.exceptions.OrderItemException;
 import com.mindhub.order_service.models.EntityOrder;
 import com.mindhub.order_service.models.OrderItem;
 import com.mindhub.order_service.repositories.OrderItemRepository;
 import com.mindhub.order_service.repositories.OrderRepository;
-import com.mindhub.order_service.services.OrderItemService;
+//import com.mindhub.order_service.services.OrderItemService;
+import com.mindhub.order_service.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
-
+/*
 @Service
 public class OrderItemServiceImpl implements OrderItemService {
     @Autowired
@@ -28,7 +36,10 @@ public class OrderItemServiceImpl implements OrderItemService {
     @Autowired
     private RestTemplate restTemplate;
 
-    private final String PRODUCT_SERVICE_URL = "http://localhost:8082/api/products/exists/";
+    //private final String PRODUCT_SERVICE_URL = "http://localhost:8082/api/products/exists/";
+
+    @Value("${PRODUCTS_PATH}")
+    private String productPath; // lb://product-service/api/products -> LoadBalanced in RestTemplate
 
     @Override
     public OrderItemDTO getOrderItemDTOById(Long id) {
@@ -49,9 +60,9 @@ public class OrderItemServiceImpl implements OrderItemService {
     @Override
     public boolean createOrderItem(Long orderId, Long productId, NewOrderItemDTO newOrderItemDTO) {
         // Verify if productId exists in product-service
-        // Use Boolean.TRUE.equals if getForObject returns null
+        // Use Boolean.TRUE.equals if getForObject returns null, converts it to false
         try {
-            boolean productExists = Boolean.TRUE.equals(restTemplate.getForObject(PRODUCT_SERVICE_URL + productId, Boolean.class));
+            boolean productExists = Boolean.TRUE.equals(restTemplate.getForObject(productPath + "/exists/" + productId, Boolean.class));
             if (!productExists) {
                 throw new RuntimeException("Product with ID " + productId + " not found");
             }
@@ -101,11 +112,13 @@ public class OrderItemServiceImpl implements OrderItemService {
     }
 
     @Override
-    public boolean deleteOrderItem(Long id) {
-        if(!orderItemRepository.existsById(id)) {
+    public boolean deleteOrderItem(Long userId, Long orderItemId) {
+        if(!orderItemRepository.existsById(orderItemId)) {
             return false;
         }
-        orderItemRepository.deleteById(id);
+        orderItemRepository.deleteById(orderItemId);
         return true;
     }
 }
+
+ */

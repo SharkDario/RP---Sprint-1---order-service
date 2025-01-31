@@ -1,10 +1,12 @@
 package com.mindhub.order_service.controllers;
 
-import com.mindhub.order_service.dtos.NewOrderItemDTO;
-import com.mindhub.order_service.dtos.OrderItemDTO;
-import com.mindhub.order_service.dtos.UpdateOrderItemDTO;
-import com.mindhub.order_service.services.OrderItemService;
+import com.mindhub.order_service.config.JwtUtils;
+import com.mindhub.order_service.dtos.*;
+import com.mindhub.order_service.exceptions.OrderException;
+import com.mindhub.order_service.exceptions.OrderItemException;
+import com.mindhub.order_service.services.OrderService;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,14 +17,21 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/orderItems")
 public class OrderItemController {
     // Dependencies Injection - Only things that are in the context of Spring Boot (has to be Component)
     // From behind generates a constructor and injects the bean for this repository (interface)
+    //@Autowired
+    //private OrderItemService orderItemService; // inject the interface directly
+
     @Autowired
-    private OrderItemService orderItemService; // inject the interface directly
+    private OrderService orderService;
+
+    @Autowired
+    private JwtUtils jwtUtils;
 
     // Validate errors
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -54,40 +63,59 @@ public class OrderItemController {
         return error;
     }
 
-    // POST /orderItems: Create an orderItem.
-    @PostMapping("/{orderId}/{productId}")
-    public ResponseEntity<?> createOrderItem(@PathVariable Long orderId, @PathVariable Long productId, @Valid @RequestBody NewOrderItemDTO newOrderItemDTO) {
-        orderItemService.createOrderItem(orderId, productId, newOrderItemDTO);
-        return new ResponseEntity<>("Order Item created successfully", HttpStatus.CREATED);
+    /*
+     * Retrieve all order items by order ID.
+     * @param orderId The ID of the order.
+     * @return A set of {@link OrderItemRecord} objects associated with the order.
+     * @throws OrderException If the order does not exist.
+     * @response 200 OK - List of order items for the specified order.
+     */
+    @GetMapping("/user/{orderId}")
+    public ResponseEntity<Set<NewOrderItemRecord>> getAllOrderItemsByOrderId(@PathVariable Long orderId) throws OrderException {
+        Set<NewOrderItemRecord> orderItems = orderService.getAllOrderItemsRecordsByOrderId(orderId);
+        return ResponseEntity.ok(orderItems);
     }
 
-    // GET /orderItems: Get all orderItems.
-    @GetMapping
-    public ResponseEntity<List<OrderItemDTO>> getAllOrderItems() {
-        List<OrderItemDTO> orderItems = orderItemService.getAllOrderItemDTO();
-        return new ResponseEntity<>(orderItems, HttpStatus.OK);
+    /*
+     * Add a new order item to an order.
+     * @param newOrderItem The {@link NewOrderItemRecord} object containing details of the new order item.
+     * @throws OrderException If the order does not exist.
+     * @throws OrderItemException If there is an issue with the new order item (e.g., invalid product ID).
+     * @response 201 Created - Order item successfully added.
+     */
+    @PostMapping("/user/{orderId}")
+    public ResponseEntity<NewOrderItemRecord> addOrderItem(HttpServletRequest request, @PathVariable Long orderId, @RequestBody ProductQuantityRecord newOrderItem) throws OrderException, OrderItemException {
+        Long userId  = jwtUtils.getIdFromToken(request.getHeader("Authorization"));
+        NewOrderItemRecord orderItemRecord = orderService.addOrderItem(userId, orderId, newOrderItem);
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderItemRecord);
     }
 
-    // PATCH /orderItems/{id}: Update an orderItem (status)
-    @PatchMapping("/{id}")
-    public ResponseEntity<?> updateOrderItem(@PathVariable Long id, @Valid @RequestBody UpdateOrderItemDTO updateOrderItemDTO) {
-        try {
-            orderItemService.updateOrderItem(id, updateOrderItemDTO);
-            return new ResponseEntity<>("Order Item updated successfully", HttpStatus.OK);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    /*
+     * Update an order item's quantity.
+     * @param orderItemId The ID of the order item to update.
+     * @param updateOrderItemRecord An object containing the updated quantity for the order item.
+     * @return The updated {@link OrderItemRecord}.
+     * @throws OrderItemException If the order item does not exist or the quantity is invalid.
+     * @response 200 OK - Order item successfully updated.
+     */
+    @PutMapping("/user/{orderItemId}")
+    public ResponseEntity<NewOrderItemRecord> updateOrderItem(HttpServletRequest request, @PathVariable Long orderItemId, @RequestBody @Valid UpdateOrderItemDTO updateOrderItemRecord) throws OrderItemException, OrderException {
+        Long userId  = jwtUtils.getIdFromToken(request.getHeader("Authorization"));
+        NewOrderItemRecord orderItems = orderService.updateOrderItemQuantity(userId, orderItemId, updateOrderItemRecord.quantity());
+        return ResponseEntity.ok(orderItems);
     }
 
-    // DELETE /orderItems/{id}
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteOrderItem(@PathVariable Long id) {
-        boolean deleted = orderItemService.deleteOrderItem(id);
-        if (!deleted) {
-            return new ResponseEntity<>("Order Item not found", HttpStatus.NOT_FOUND);
-        }
-        return new ResponseEntity<>("Order Item deleted successfully", HttpStatus.OK);
+    /*
+     * Delete an order item by its ID.
+     * @param orderItemId The ID of the order item to delete.
+     * @throws OrderException If the associated order does not exist.
+     * @throws OrderItemException If the order item does not exist.
+     * @response 204 No Content - Order item successfully deleted.
+     */
+    @DeleteMapping("/user/{orderItemId}")
+    public ResponseEntity<Void> deleteOrderItem(@PathVariable Long orderItemId, HttpServletRequest request) throws OrderException, OrderItemException {
+        Long userId = jwtUtils.getIdFromToken(request.getHeader("Authorization"));
+        orderService.deleteOrderItem(userId, orderItemId);
+        return ResponseEntity.noContent().build();
     }
 }
